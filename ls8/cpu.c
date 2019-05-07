@@ -1,6 +1,7 @@
 #include "cpu.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define DATA_LEN 6
 
@@ -17,26 +18,83 @@ void cpu_ram_write(struct cpu *cpu, unsigned char address, unsigned char data)
 /**
  * Load the binary bytes from a .ls8 source file into a RAM array
  */
-void cpu_load(struct cpu *cpu)
+void cpu_load(struct cpu *cpu, char *argv)
 {
-  char data[DATA_LEN] = {
-      // From print8.ls8
-      0b10000010, // LDI R0,8
-      0b00000000,
-      0b00001000,
-      0b01000111, // PRN R0
-      0b00000000,
-      0b00000001 // HLT
-  };
+  // char data[DATA_LEN] = {
+  //     // From print8.ls8
+  //     0b10000010, // LDI R0,8
+  //     0b00000000,
+  //     0b00001000,
+  //     0b01000111, // PRN R0
+  //     0b00000000,
+  //     0b00000001 // HLT
+  // };
+
+  // int address = 0;
+
+  // for (int i = 0; i < DATA_LEN; i++)
+  // {
+  //   cpu->ram[address++] = data[i];
+  // }
+
+  // TODO: Replace this with something less hard-coded
+  FILE *fp;
+  char line[1024];
 
   int address = 0;
 
-  for (int i = 0; i < DATA_LEN; i++)
+  printf("Args v is.. %s\n", argv);
+  fp = fopen(argv, "r");
+
+  while (fgets(line, sizeof line, fp) != NULL)
   {
-    cpu->ram[address++] = data[i];
+    printf("%s", line);
+    if (line[0] == '\n' || line[0] == '#')
+    {
+      printf("Ignoring this line.\n");
+      continue;
+    }
+
+    unsigned char b;
+    b = strtoul(line, NULL, 2);
+    printf("%02X\n", b);
+
+    cpu_ram_write(cpu, address++, b);
   }
 
-  // TODO: Replace this with something less hard-coded
+  fclose(fp);
+
+  // FILE *fp;
+  // char line[1024];
+  // int address = 0;
+
+  // fp = fopen(argv[1], "r");
+
+  // if (fp == NULL)
+  // {
+  //   fprintf(stderr, "comp: error opening file\n");
+  //   exit(2);
+  // }
+
+  // while (fgets(line, 1024, fp) != NULL)
+  // {
+  //   char *endptr;
+
+  //   unsigned int val = strtoul(line, &endptr, 10);
+
+  //   if (endptr == line)
+  //   {
+  //     //printf("Found no digits\n");
+  //     continue;
+  //   }
+
+  //   //printf("%u\n", val);
+
+  //   cpu->ram[address] = val;
+  //   address++;
+  // }
+
+  // fclose(fp);
 }
 
 /**
@@ -44,6 +102,10 @@ void cpu_load(struct cpu *cpu)
  */
 void alu(struct cpu *cpu, enum alu_op op, unsigned char regA, unsigned char regB)
 {
+  (void)cpu;
+  (void)regA;
+  (void)regB;
+
   switch (op)
   {
   case ALU_MUL:
@@ -75,7 +137,7 @@ void cpu_run(struct cpu *cpu)
     // 3. Get the appropriate value(s) of the operands following this instruction
     // int add_to_pc = (ir >> 6) + 1;
 
-    printf("TRACE: %02X: %02X %02X %02X\n", cpu->pc, ir, operandA, operandB);
+    // printf("TRACE: %02X: %02X %02X %02X\n", cpu->pc, ir, operandA, operandB);
 
     // 4. switch() over it to decide on a course of action.
     switch (ir)
