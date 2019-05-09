@@ -116,52 +116,39 @@ void cpu_run(struct cpu *cpu)
     {
     case LDI:
       cpu->registers[operandA] = operandB;
-      // cpu->pc += 3;
       break;
 
     case PRN:
       printf("%d\n", cpu->registers[operandA]);
-      // cpu->pc += 2;
       break;
 
     case MUL:
       alu(cpu, ALU_MUL, operandA, operandB);
-      // cpu->pc += 3;
       break;
 
     case ADD:
       alu(cpu, ALU_ADD, operandA, operandA);
-      // cpu->pc += 2;
-      printf("ADDDDDD\n");
       break;
 
     case PUSH:
       cpu->registers[7]--;
-      // printf("Register -1.... %d\n", cpu->registers[7]);
       cpu_ram_write(cpu, cpu->registers[7], cpu->registers[operandA]);
-
-      // SP = &cpu->registers[sp_value];
       break;
 
     case POP:
-      // SP = &cpu->registers[sp_value];
       cpu->registers[operandA] = cpu_ram_read(cpu, cpu->registers[7]);
       cpu->registers[7]++;
       break;
 
     case CALL:
       add_to_pc = 0;
-      printf("Reg 3.. %d\n", cpu->registers[3]);
-      cpu->registers[3] = cpu->pc;
-      printf("Reg 3 post.. %d\n", cpu->registers[3]);
+      cpu_ram_write(cpu, cpu->registers[7], cpu->pc + 2);
       cpu->pc = 24;
-      cpu_ram_write(cpu, cpu->registers[7], cpu->registers[operandA]);
-      // printf("Register: %d\n %d\n", cpu->registers[7], cpu->registers[operandB]);
       break;
 
     case RET:
-      // add_to_pc = 0;
-      cpu->pc = 0;
+      add_to_pc = 0;
+      cpu->pc = cpu_ram_read(cpu, cpu->registers[7]);
       break;
 
     case HLT:
