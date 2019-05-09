@@ -92,8 +92,7 @@ void cpu_run(struct cpu *cpu)
   int running = 1; // True until we get a HLT instruction
   unsigned char ir, operandA, operandB;
 
-  // int sp_value = 8;
-  // unsigned char *SP = &cpu->registers[sp_value];
+  int SP = 7; // this is the stack pointer as states in the specs
 
   while (running)
   {
@@ -131,24 +130,24 @@ void cpu_run(struct cpu *cpu)
       break;
 
     case PUSH:
-      cpu->registers[7]--;
-      cpu_ram_write(cpu, cpu->registers[7], cpu->registers[operandA]);
+      cpu->registers[SP]--;
+      cpu_ram_write(cpu, cpu->registers[SP], cpu->registers[operandA]);
       break;
 
     case POP:
-      cpu->registers[operandA] = cpu_ram_read(cpu, cpu->registers[7]);
-      cpu->registers[7]++;
+      cpu->registers[operandA] = cpu_ram_read(cpu, cpu->registers[SP]);
+      cpu->registers[SP]++;
       break;
 
     case CALL:
       add_to_pc = 0;
-      cpu_ram_write(cpu, cpu->registers[7], cpu->pc + 2);
+      cpu_ram_write(cpu, cpu->registers[SP], cpu->pc + 2);
       cpu->pc = 24;
       break;
 
     case RET:
       add_to_pc = 0;
-      cpu->pc = cpu_ram_read(cpu, cpu->registers[7]);
+      cpu->pc = cpu_ram_read(cpu, cpu->registers[SP]);
       break;
 
     case HLT:
@@ -169,8 +168,10 @@ void cpu_run(struct cpu *cpu)
 void cpu_init(struct cpu *cpu)
 {
   // TODO: Initialize the PC and other special registers
+  int SP = 7; // this is the stack pointer as states in the specs
+
   cpu->pc = 0;
   memset(cpu->ram, 0, sizeof(cpu->ram));
   memset(cpu->registers, 0, sizeof(cpu->registers));
-  cpu->registers[7] = 0xF4;
+  cpu->registers[SP] = 0xF4;
 }
