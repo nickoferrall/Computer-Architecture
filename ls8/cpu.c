@@ -78,6 +78,9 @@ void alu(struct cpu *cpu, enum alu_op op, unsigned char regA, unsigned char regB
     break;
 
     // TODO: implement more ALU ops
+  case ALU_ADD:
+    cpu->registers[regA] = cpu->registers[regA] + cpu->registers[regB];
+    break;
   }
 }
 
@@ -88,6 +91,9 @@ void cpu_run(struct cpu *cpu)
 {
   int running = 1; // True until we get a HLT instruction
   unsigned char ir, operandA, operandB;
+
+  // int sp_value = 8;
+  // unsigned char *SP = &cpu->registers[sp_value];
 
   while (running)
   {
@@ -123,6 +129,41 @@ void cpu_run(struct cpu *cpu)
       // cpu->pc += 3;
       break;
 
+    case ADD:
+      alu(cpu, ALU_ADD, operandA, operandA);
+      // cpu->pc += 2;
+      printf("ADDDDDD\n");
+      break;
+
+    case PUSH:
+      cpu->registers[7]--;
+      // printf("Register -1.... %d\n", cpu->registers[7]);
+      cpu_ram_write(cpu, cpu->registers[7], cpu->registers[operandA]);
+
+      // SP = &cpu->registers[sp_value];
+      break;
+
+    case POP:
+      // SP = &cpu->registers[sp_value];
+      cpu->registers[operandA] = cpu_ram_read(cpu, cpu->registers[7]);
+      cpu->registers[7]++;
+      break;
+
+    case CALL:
+      add_to_pc = 0;
+      printf("Reg 3.. %d\n", cpu->registers[3]);
+      cpu->registers[3] = cpu->pc;
+      printf("Reg 3 post.. %d\n", cpu->registers[3]);
+      cpu->pc = 24;
+      cpu_ram_write(cpu, cpu->registers[7], cpu->registers[operandA]);
+      // printf("Register: %d\n %d\n", cpu->registers[7], cpu->registers[operandB]);
+      break;
+
+    case RET:
+      // add_to_pc = 0;
+      cpu->pc = 0;
+      break;
+
     case HLT:
       running = 0;
       break;
@@ -131,7 +172,7 @@ void cpu_run(struct cpu *cpu)
     // 5. Do whatever the instruction should do according to the spec.
 
     // 6. Move the PC to the next instruction.
-    // cpu->pc += add_to_pc;
+    cpu->pc += add_to_pc;
   }
 }
 
@@ -144,4 +185,5 @@ void cpu_init(struct cpu *cpu)
   cpu->pc = 0;
   memset(cpu->ram, 0, sizeof(cpu->ram));
   memset(cpu->registers, 0, sizeof(cpu->registers));
+  cpu->registers[7] = 0xF4;
 }
