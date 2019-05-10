@@ -101,6 +101,11 @@ void alu(struct cpu *cpu, enum alu_op op, unsigned char regA, unsigned char regB
       cpu->registers[6] = 1;
       cpu->registers[5] = 0;
     }
+    break;
+
+  case ALU_MOD:
+    cpu->registers[regA] = cpu->registers[regA] % cpu->registers[regB];
+    break;
   }
 }
 
@@ -172,6 +177,10 @@ void cpu_run(struct cpu *cpu)
 
     case CMP:
       alu(cpu, ALU_CMP, operandA, operandB);
+      break;
+
+    case MOD:
+      alu(cpu, ALU_MOD, operandA, operandB);
       break;
 
     case JEQ:

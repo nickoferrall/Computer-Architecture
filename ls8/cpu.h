@@ -16,7 +16,8 @@ enum alu_op
   ALU_MUL,
   // Add more here
   ALU_ADD,
-  ALU_CMP
+  ALU_CMP,
+  ALU_MOD
 };
 
 // Instructions
@@ -38,6 +39,7 @@ enum alu_op
 #define CMP 0b10100111
 #define JEQ 0b01010101
 #define JNE 0b01010110
+#define MOD 0b10100100
 
 // Function declarations
 
