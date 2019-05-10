@@ -43,12 +43,10 @@ void cpu_load(struct cpu *cpu, char *argv)
 
   int address = 0;
 
-  printf("Args v is.. %s\n", argv);
   fp = fopen(argv, "r");
 
   while (fgets(line, sizeof line, fp) != NULL)
   {
-    printf("%s", line);
     if (line[0] == '\n' || line[0] == '#')
     {
       printf("Ignoring this line.\n");
@@ -57,44 +55,11 @@ void cpu_load(struct cpu *cpu, char *argv)
 
     unsigned char b;
     b = strtoul(line, NULL, 2);
-    printf("%02X\n", b);
 
     cpu_ram_write(cpu, address++, b);
   }
 
   fclose(fp);
-
-  // FILE *fp;
-  // char line[1024];
-  // int address = 0;
-
-  // fp = fopen(argv[1], "r");
-
-  // if (fp == NULL)
-  // {
-  //   fprintf(stderr, "comp: error opening file\n");
-  //   exit(2);
-  // }
-
-  // while (fgets(line, 1024, fp) != NULL)
-  // {
-  //   char *endptr;
-
-  //   unsigned int val = strtoul(line, &endptr, 10);
-
-  //   if (endptr == line)
-  //   {
-  //     //printf("Found no digits\n");
-  //     continue;
-  //   }
-
-  //   //printf("%u\n", val);
-
-  //   cpu->ram[address] = val;
-  //   address++;
-  // }
-
-  // fclose(fp);
 }
 
 /**
@@ -102,17 +67,48 @@ void cpu_load(struct cpu *cpu, char *argv)
  */
 void alu(struct cpu *cpu, enum alu_op op, unsigned char regA, unsigned char regB)
 {
-  (void)cpu;
-  (void)regA;
-  (void)regB;
 
   switch (op)
   {
   case ALU_MUL:
     // TODO
+    cpu->registers[regA] = cpu->registers[regA] * cpu->registers[regB];
     break;
 
     // TODO: implement more ALU ops
+  case ALU_ADD:
+    cpu->registers[regA] = cpu->registers[regA] + cpu->registers[regB];
+    break;
+
+  case ALU_CMP:
+    if (cpu->registers[regA] == cpu->registers[regB])
+    {
+      cpu->registers[7] = 1;
+      cpu->registers[6] = 0;
+      cpu->registers[5] = 0;
+    }
+    else if (cpu->registers[regA] < cpu->registers[regB])
+    {
+      cpu->registers[7] = 0;
+      cpu->registers[6] = 0;
+      cpu->registers[5] = 1;
+    }
+    else
+    {
+      cpu->registers[7] = 0;
+      cpu->registers[6] = 1;
+      cpu->registers[5] = 0;
+    }
+    break;
+
+  case ALU_MOD:
+    if (regB == 0)
+    {
+      fprintf(stderr, "Error: The second register can't be 0.");
+      break;
+    }
+    cpu->registers[regA] = cpu->registers[regA] % cpu->registers[regB];
+    break;
   }
 }
 
@@ -123,6 +119,8 @@ void cpu_run(struct cpu *cpu)
 {
   int running = 1; // True until we get a HLT instruction
   unsigned char ir, operandA, operandB;
+
+  int SP = 7; // this is the stack pointer as states in the specs
 
   while (running)
   {
@@ -135,7 +133,8 @@ void cpu_run(struct cpu *cpu)
     operandB = cpu_ram_read(cpu, cpu->pc + 2);
 
     // 3. Get the appropriate value(s) of the operands following this instruction
-    // int add_to_pc = (ir >> 6) + 1;
+
+    int add_to_pc = (ir >> 6) + 1; // this shift over 6 - the first two digits represent the number of arguments. It gets us the number of bytes that the instruction has arguments. Then we add one more byte on for the instruction itself
 
     // printf("TRACE: %02X: %02X %02X %02X\n", cpu->pc, ir, operandA, operandB);
 
@@ -144,13 +143,68 @@ void cpu_run(struct cpu *cpu)
     {
     case LDI:
       cpu->registers[operandA] = operandB;
-      cpu->pc += 3;
       break;
 
     case PRN:
       printf("%d\n", cpu->registers[operandA]);
-      // printf("8\n");
-      cpu->pc += 2;
+      break;
+
+    case MUL:
+      alu(cpu, ALU_MUL, operandA, operandB);
+      break;
+
+    case ADD:
+      alu(cpu, ALU_ADD, operandA, operandA);
+      break;
+
+    case PUSH:
+      cpu->registers[SP]--;
+      cpu_ram_write(cpu, cpu->registers[SP], cpu->registers[operandA]);
+      break;
+
+    case POP:
+      cpu->registers[operandA] = cpu_ram_read(cpu, cpu->registers[SP]);
+      cpu->registers[SP]++;
+      break;
+
+    case CALL:
+      add_to_pc = 0;
+      cpu_ram_write(cpu, cpu->registers[SP], cpu->pc + 2);
+      cpu->pc = 24;
+      break;
+
+    case RET:
+      add_to_pc = 0;
+      cpu->pc = cpu_ram_read(cpu, cpu->registers[SP]);
+      break;
+
+    case CMP:
+      alu(cpu, ALU_CMP, operandA, operandB);
+      break;
+
+    case MOD:
+      alu(cpu, ALU_MOD, operandA, operandB);
+      break;
+
+    case JEQ:
+      if (cpu->registers[7] == 1)
+      {
+        cpu->pc = cpu->registers[operandA];
+        add_to_pc = 0;
+      }
+      break;
+
+    case JNE:
+      if (cpu->registers[7] == 0)
+      {
+        cpu->pc = cpu->registers[operandA];
+        add_to_pc = 0;
+      }
+      break;
+
+    case JMP:
+      cpu->pc = cpu->registers[operandA];
+      add_to_pc = 0;
       break;
 
     case HLT:
@@ -161,7 +215,7 @@ void cpu_run(struct cpu *cpu)
     // 5. Do whatever the instruction should do according to the spec.
 
     // 6. Move the PC to the next instruction.
-    // cpu->pc += add_to_pc;
+    cpu->pc += add_to_pc;
   }
 }
 
@@ -171,7 +225,10 @@ void cpu_run(struct cpu *cpu)
 void cpu_init(struct cpu *cpu)
 {
   // TODO: Initialize the PC and other special registers
+  int SP = 7; // this is the stack pointer as states in the specs
+
   cpu->pc = 0;
   memset(cpu->ram, 0, sizeof(cpu->ram));
   memset(cpu->registers, 0, sizeof(cpu->registers));
+  cpu->registers[SP] = 0xF4;
 }
