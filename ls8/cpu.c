@@ -104,6 +104,11 @@ void alu(struct cpu *cpu, enum alu_op op, unsigned char regA, unsigned char regB
     break;
 
   case ALU_MOD:
+    if (regB == 0)
+    {
+      fprintf(stderr, "Error: The second register can't be 0.");
+      break;
+    }
     cpu->registers[regA] = cpu->registers[regA] % cpu->registers[regB];
     break;
   }
