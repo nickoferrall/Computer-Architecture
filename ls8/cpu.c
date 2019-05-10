@@ -81,6 +81,26 @@ void alu(struct cpu *cpu, enum alu_op op, unsigned char regA, unsigned char regB
   case ALU_ADD:
     cpu->registers[regA] = cpu->registers[regA] + cpu->registers[regB];
     break;
+
+  case ALU_CMP:
+    if (cpu->registers[regA] == cpu->registers[regB])
+    {
+      cpu->registers[7] = 1;
+      cpu->registers[6] = 0;
+      cpu->registers[5] = 0;
+    }
+    else if (cpu->registers[regA] < cpu->registers[regB])
+    {
+      cpu->registers[7] = 0;
+      cpu->registers[6] = 0;
+      cpu->registers[5] = 1;
+    }
+    else
+    {
+      cpu->registers[7] = 0;
+      cpu->registers[6] = 1;
+      cpu->registers[5] = 0;
+    }
   }
 }
 
@@ -148,6 +168,31 @@ void cpu_run(struct cpu *cpu)
     case RET:
       add_to_pc = 0;
       cpu->pc = cpu_ram_read(cpu, cpu->registers[SP]);
+      break;
+
+    case CMP:
+      alu(cpu, ALU_CMP, operandA, operandB);
+      break;
+
+    case JEQ:
+      if (cpu->registers[7] == 1)
+      {
+        cpu->pc = cpu->registers[operandA];
+        add_to_pc = 0;
+      }
+      break;
+
+    case JNE:
+      if (cpu->registers[7] == 0)
+      {
+        cpu->pc = cpu->registers[operandA];
+        add_to_pc = 0;
+      }
+      break;
+
+    case JMP:
+      cpu->pc = cpu->registers[operandA];
+      add_to_pc = 0;
       break;
 
     case HLT:
